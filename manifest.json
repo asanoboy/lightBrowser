@@ -1,5 +1,10 @@
 {
    "background_page": "background.html",
+   "content_scripts": [ {
+      "css": [ "content.css" ],
+      "js": [ "content.js" ],
+      "matches": [ "http://*/*", "https://*/*" ]
+   } ],   
    "description": "display Light Browser when right click or Ctrl + Shift + left click on a link",
    "name": "Light Browser",
    "permissions": [ "contextMenus" ],
