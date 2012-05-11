@@ -353,7 +353,7 @@ LightBrowser.prototype.initMouseEvents = function(){
 	
 	this.$closeButton.find("a").click(function(){
 		_this.$browser.remove();
-		return;
+		return false;
 	});
 };
 
