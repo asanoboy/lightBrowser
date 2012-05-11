@@ -1,19 +1,14 @@
-<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+
 <script>
-	$(function(){
-		chrome.contextMenus.create({
-			type: 'normal',
-			title: 'Show Light Browser',
-			contexts: ['link'],
-			onclick: function(link, tab){
-				var url = link.linkUrl;
-				chrome.tabs.getSelected(null, function(tab){
-					chrome.tabs.sendRequest(tab,id, {greeting: "hello"}, function(res){
-						
-					})
-				});
-			}
-		});
-	})
+	
+	chrome.contextMenus.create({
+		type: 'normal',
+		title: 'Show Light Browser',
+		contexts: ['link'],
+		onclick: function(link, tab){
+			chrome.tabs.sendRequest(tab.id, {url: link.linkUrl}, function(res){});
+		}
+	});
+	
 	
 </script>
