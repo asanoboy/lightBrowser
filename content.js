@@ -1,12 +1,12 @@
-var createLightBrowser = function(){
-	return new LightBrowser($(this).attr("href"), 300, 300, 100, 100, $("body"));
+var createLightBrowser = function(url){
+	return new LightBrowser(url, 300, 300, 100, $('body').scrollTop()+100, $("body"));
 };
 
 var bindShiftCtrlClick = function(doc){
 	
 	$(doc).delegate("a", "click", function(e){
 		if( e.ctrlKey && e.shiftKey ){
-			createLightBrowser.apply(this);
+			createLightBrowser($(this).attr("href"));
 			e.preventDefault();
 		}
 	});
@@ -15,8 +15,7 @@ var bindShiftCtrlClick = function(doc){
 bindShiftCtrlClick(document);
 
 chrome.extension.onRequest.addListener(function(request, sender, sendResponse){
-	alert("create");
-	createLightBrowser();
+	createLightBrowser(request.url);
 	sendResponse({});
 });
 
@@ -31,8 +30,10 @@ var LightBrowser = function(url, width, height, x, y, $parent){
 	/*
 	 * style
 	 */
-	this.resizeBarWidth = 3;
-	this.grabHeaderHeight = 20;
+	this.resizeBarWidth = 4;
+	this.grabHeaderHeight = 25;
+	this.radius = 4;
+	this.isFullScreen = false;
 	
 	this.initRender();
 	this.initMouseEvents();
@@ -49,6 +50,7 @@ var LightBrowser = function(url, width, height, x, y, $parent){
 LightBrowser.prototype.initRender = function(){
 	
 	this.$browser = $("<div>");
+	this.$topBackSheet = this.$browser.append($("<div>")).find(":last");
 	this.$leftTopResizeEdge = this.$browser.append($("<div>")).find(":last");
 	this.$topEdge = this.$browser.append($("<div>")).find(":last");
 	this.$rightTopResizeEdge = this.$browser.append($("<div>")).find(":last");
@@ -63,39 +65,42 @@ LightBrowser.prototype.initRender = function(){
 	this.$bottomEdge = this.$browser.append($("<div>")).find(":last");
 	this.$rightBottomResizeEdge = this.$browser.append($("<div>")).find(":last");
 	
-	this.$browser.find("*").css({
-		'margin': 0,
-		'padding': 0,
-		'border': '0 solid #FFF'
-	});
-	
 	this.$browser.css({
 		'position': 'absolute',
 		'backgroundColor': '#4271C9',
-		'border': 'solid 1px #444'
+		'border': 'solid 1px #444',
+		'WebkitBorderRadius': this.radius+'px',
+		'zIndex': 1000000
 	});
 	
 	this.$leftTopResizeEdge.css({
 		'cursor': 'nw-resize',
 		'backgroundColor': '#5C8EDA',
-		'display': 'inline-block'
+		'border': 'solid 1px #444',
+		'_display': 'inline-block',
+		'float': 'left',
+		'opacity': 0
 	});
 	
 	this.$topEdge.css({
 		'cursor': 'n-resize',
 		'backgroundColor': '#5C8EDA',
-		'display': 'inline-block'
+		'display': 'inline-block',
+		'float': 'left'
 	});
 	
 	this.$rightTopResizeEdge.css({
 		'cursor': 'ne-resize',
 		'backgroundColor': '#5C8EDA',
-		'display': 'inline-block'
+		'display': 'inline-block',
+		'float': 'left'
 	});
 	
 	this.$leftEdge.css({
+		'background': 'url(chrome-extension://bbfkhdjpobhbfadfcaaeainedmimemla/images/borderTop.png) repeat-x',
 		'cursor': 'w-resize',
-		'float': 'left'
+		'float': 'left',
+		'clear': 'both'
 	});
 	
 	this.$content.css({
@@ -106,14 +111,12 @@ LightBrowser.prototype.initRender = function(){
 		'backgroundImage': '-webkit-linear-gradient(top, #5C8EDA, #4271C9)'
 	});
 	
-	this.$closeButton.append("<a href='#'>x</a>").css({
+	this.$closeButton.append("<a href='#'><img src='chrome-extension://bbfkhdjpobhbfadfcaaeainedmimemla/images/close.png'></a>").css({
 		'float': 'right'
-	}).find("a").css({
-		'color': '#DDD',
-		'textShadow': '1px 1px 1px #999'
 	});
 	
 	this.$iframe.css({
+		'backgroundColor': '#FFF'
 	});
 	
 	this.$overlay.css({
@@ -123,6 +126,7 @@ LightBrowser.prototype.initRender = function(){
 	});
 	
 	this.$rightEdge.css({
+		'background': 'url(chrome-extension://bbfkhdjpobhbfadfcaaeainedmimemla/images/borderTop.png) repeat-x',
 		'cursor': 'e-resize',
 		'float': 'right'
 	});
@@ -145,82 +149,135 @@ LightBrowser.prototype.initRender = function(){
 	this.arrangeSize();
 	
 	this.$parent.append(this.$browser);	
+	
+	this.$browser.find("*").css({
+		'margin': 0,
+		'padding': 0,
+		'border': '0 solid #FFF'
+	});
+	
+	// borderを設定しているので後ろに持ってきた
+	this.$topBackSheet.css({
+		'position': 'absolute',
+		'backgroundColor': '#5C8EDA',
+		'height': (this.resizeBarWidth+this.grabHeaderHeight)+'px',
+		'borderLeft': 'solid 1px #444',
+		'borderTop': 'solid 1px #444',
+		'borderRight': 'solid 1px #444',
+		'WebkitBorderRadius': this.radius+'px',
+		'zIndex': -1,
+		'left': '-1px',
+		'top':' -1px'
+	});
 };
 
 LightBrowser.prototype.arrangeSize = function(){
 	
+	var width = this.width, height = this.height, left = this.offsetX, top = this.offsetY;
+	if( this.isFullScreen ){
+		width = $(window).width()-2;
+		height = $(window).height()-2;
+		top = $(window).scrollTop();
+		left = $(window).scrollLeft();
+	}
+	
 	this.$browser.css({
-		'left': this.offsetX+'px',
-		'top': this.offsetY+'px',
-		'width': this.width+'px',
-		'height': this.height+'px'
+		'left': left+'px',
+		'top': top+'px',
+		'width': width+'px',
+		'height': height+'px'
+	});
+	
+	this.$topBackSheet.css({
+		'width': width+'px'
 	});
 	
 	this.$leftTopResizeEdge.css({
 		'width': this.resizeBarWidth+'px',
-		'height': this.resizeBarWidth+'px'
+		'height': this.resizeBarWidth+'px',
+		'opacity': 0
 	});
 	
 	this.$topEdge.css({
-		'width': (this.width-this.resizeBarWidth*2)+'px',
+		'width': (width-this.resizeBarWidth*2)+'px',
 		'height': this.resizeBarWidth+'px'
 	});
 	
 	this.$rightTopResizeEdge.css({
 		'width': this.resizeBarWidth+'px',
-		'height': this.resizeBarWidth+'px'		
+		'height': this.resizeBarWidth+'px',
+		'opacity': 0		
 	});
 	
 	this.$leftEdge.css({
 		'width': this.resizeBarWidth+'px',
-		'height': (this.height-this.resizeBarWidth*2)+'px'
+		'height': (height-this.resizeBarWidth*2)+'px'
 	});
 	
 	this.$content.css({
-		'width': (this.width-this.resizeBarWidth*2)+'px',
-		'height': (this.height-this.resizeBarWidth*2)+'px'
+		'width': (width-this.resizeBarWidth*2)+'px',
+		'height': (height-this.resizeBarWidth*2)+'px'
 	});
 	
 	this.$header.css({
-		'width': (this.width-this.resizeBarWidth*2)+'px',
+		'width': (width-this.resizeBarWidth*2)+'px',
 		'height': this.grabHeaderHeight+'px'
 	});
 	
 	this.$iframe.css({
-		'width': (this.width-this.resizeBarWidth*2)+'px',
-		'height': (this.height-this.resizeBarWidth*2 - this.grabHeaderHeight)+'px'
+		'width': (width-this.resizeBarWidth*2)+'px',
+		'height': (height-this.resizeBarWidth*2 - this.grabHeaderHeight)+'px'
 	});
 	
 	this.$overlay.css({
-		'width': (this.width-this.resizeBarWidth*2)+'px',
-		'height': (this.height-this.resizeBarWidth*2 - this.grabHeaderHeight)+'px'
+		'width': (width-this.resizeBarWidth*2)+'px',
+		'height': (height-this.resizeBarWidth*2 - this.grabHeaderHeight)+'px'
 	});
 	
 	this.$rightEdge.css({
 		'width': this.resizeBarWidth+'px',
-		'height': (this.height-this.resizeBarWidth*2)+'px'
+		'height': (height-this.resizeBarWidth*2)+'px'
 	});
 	
 	
 	this.$leftBottomResizeEdge.css({
-		'top': (this.height-this.resizeBarWidth)+'px',
+		'top': (height-this.resizeBarWidth)+'px',
 		'width': this.resizeBarWidth+'px',
 		'height': this.resizeBarWidth+'px'
 	});
 	
 	this.$bottomEdge.css({
-		'top': (this.height-this.resizeBarWidth)+'px',
+		'top': (height-this.resizeBarWidth)+'px',
 		'left': this.resizeBarWidth+'px',
-		'width': (this.width-this.resizeBarWidth*2)+'px',
+		'width': (width-this.resizeBarWidth*2)+'px',
 		'height': this.resizeBarWidth+'px'
 	});
 	
 	this.$rightBottomResizeEdge.css({
-		'top': (this.height-this.resizeBarWidth)+'px',
-		'left': (this.width-this.resizeBarWidth)+'px',
+		'top': (height-this.resizeBarWidth)+'px',
+		'left': (width-this.resizeBarWidth)+'px',
 		'width': this.resizeBarWidth+'px',
 		'height': this.resizeBarWidth+'px'
 	});
+};
+
+LightBrowser.prototype.toggleFullScreen = function(){
+	var _this = this;
+	if( !this.fullScreenResizeHandler ){
+		this.fullScreenResizeHandler = function(){
+			_this.arrangeSize();
+		}
+	}
+	
+	if( this.isFullScreen ){
+		this.isFullScreen = false;
+		$(window).unbind('resize', this.fullScreenResizeHandler);
+	}
+	else {
+		this.isFullScreen = true;
+		$(window).bind('resize', this.fullScreenResizeHandler);
+	}
+	this.arrangeSize();
 };
 
 LightBrowser.prototype.initMouseEvents = function(){
@@ -242,6 +299,10 @@ LightBrowser.prototype.initMouseEvents = function(){
 			moveAction = null;
 		}
 	};
+	
+	this.$header.dblclick(function(e){
+		_this.toggleFullScreen();
+	});
 	
 	this.$header.bind('mousedown', function(e){
 		if( e.button==0 ){
