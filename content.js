@@ -4,7 +4,6 @@ var createLightBrowser = function(url){
 };
 
 var bindShiftCtrlClick = function(doc){
-	window.addEventListener("mousedown", function(){console.log('a');});
 	$(window).delegate("a", "click", function(e){
 		if( e.ctrlKey && e.shiftKey ){
 			createLightBrowser($(this).attr("href"));
@@ -32,7 +31,8 @@ var LightBrowser = function(url, width, height, x, y, $parent){
 	 * style
 	 */
 	this.resizeBarWidth = 4;
-	this.grabHeaderHeight = 25;
+	this.grabHeaderHeight = 29;
+	this.grabHeaderTopPadding = 4;
 	this.radius = 4;
 	this.isFullScreen = false;
 	
@@ -42,21 +42,22 @@ var LightBrowser = function(url, width, height, x, y, $parent){
 	var _this = this;
 	this.$iframe.attr("src", this.url);
 	this.$iframe.load(function(){
-		
-		_this.history = [this.src];
+		_this.history.push(this.src);
 		_this.historyIndex = 0;
 		_this.updateHeader();
-
-		//_this.document がブラウザのSame Domain Policyによりアクセス出来ない場合がある。対応を決めるまでこの機能はオフにする
-		//_this.document = _this.$iframe.contents();
-		//bindShiftCtrlClick( _this.document );
 	});
-	
-	
 };
 
 LightBrowser.prototype.updateHeader = function(){
 	this.$urlDisplay.val(this.history[this.historyIndex]);
+};
+
+LightBrowser.prototype.historyForward = function(){
+	
+};
+
+LightBrowser.prototype.historyBack = function(){
+	
 };
 
 LightBrowser.prototype.initRender = function(){
@@ -204,20 +205,35 @@ LightBrowser.prototype.initRender = function(){
 		'top':' -1px'
 	});
 	
+	this.$header.css({
+		'height': (this.grabHeaderHeight-this.grabHeaderTopPadding)+'px',
+		'paddingTop': this.grabHeaderTopPadding+'px'
+	});
+	
 	this.$urlDisplay.css({
-		'border': '1px solid #777'
+		'border': '1px solid #777',
+		'padding': '0 5px 0 5px'
 	});
 };
 
 LightBrowser.prototype.arrangeSize = function(){
 	
-	var width = this.width, height = this.height, left = this.offsetX, top = this.offsetY;
+	this.displayWidth = this.width; 
+	this.displayHeight = this.height;
+	var left = this.offsetX;
+	var top = this.offsetY;
 	if( this.isFullScreen ){
-		width = $(window).width()-2;
-		height = $(window).height()-2;
+		this.displayWidth = $(window).width()-2;
+		this.displayHeight = $(window).height()-2;
 		top = $(window).scrollTop();
 		left = $(window).scrollLeft();
 	}
+	else {
+		this.displayWidth = this.displayWidth<100 ? 100 : this.displayWidth;
+		this.displayHeight = this.displayHeight<100 ? 100 : this.displayHeight;
+	}
+	
+	var width = this.displayWidth, height = this.displayHeight;
 	
 	this.$browser.css({
 		'left': left+'px',
@@ -258,8 +274,7 @@ LightBrowser.prototype.arrangeSize = function(){
 	});
 	
 	this.$header.css({
-		'width': (width-this.resizeBarWidth*2)+'px',
-		'height': this.grabHeaderHeight+'px'
+		'width': (width-this.resizeBarWidth*2)+'px'
 	});
 	
 	this.$urlDisplayWrapper.css({
@@ -342,6 +357,9 @@ LightBrowser.prototype.initMouseEvents = function(){
 	};
 
 	var endGrab = function(){
+		_this.width = _this.displayWidth;
+		_this.hegith = _this.displayHeight;
+		
 		$.each(lightBrowsers, function(i, b){
 			b.$overlay.hide();
 		});
@@ -465,19 +483,22 @@ LightBrowser.prototype.initMouseEvents = function(){
 	});
 	
 	$(document).bind('mouseup', function(e){
-		console.log('mouseup');
 		if( e.button==0 ){
 			endGrab();
 		}
 	});
 	
 	this.$prevButton.find("a").click(function(){
-		console.log(_this.$iframe);
+		if( !_this.historyBack() ){
+			alert("can't go back.")
+		}
 		return false;
 	});
 	
 	this.$nextButton.find("a").click(function(){
-		
+		if( !_this.historyForward() ){
+			alert("can't go forward.")
+		}
 		return false;
 	});
 	
