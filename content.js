@@ -46,16 +46,17 @@ var LightBrowser = function(url, width, height, x, y, $parent){
 		_this.history = [this.src];
 		_this.historyIndex = 0;
 		_this.updateHeader();
-		
+
 		//_this.document がブラウザのSame Domain Policyによりアクセス出来ない場合がある。対応を決めるまでこの機能はオフにする
 		//_this.document = _this.$iframe.contents();
 		//bindShiftCtrlClick( _this.document );
 	});
-
+	
+	
 };
 
 LightBrowser.prototype.updateHeader = function(){
-	this.$urlDisplay.html(this.history[this.historyIndex]);
+	this.$urlDisplay.val(this.history[this.historyIndex]);
 };
 
 LightBrowser.prototype.initRender = function(){
@@ -69,8 +70,9 @@ LightBrowser.prototype.initRender = function(){
 	this.$content = this.$browser.append($("<div>")).find(":last");
 	this.$header = this.$content.append($("<div>")).find(":last");
 	this.$prevButton = this.$header.append($("<div>")).find(":last"); 
-	this.$nextButton = this.$header.append($("<div>")).find(":last"); 
-	this.$urlDisplay = this.$header.append($("<div>test</div>")).find(":last");
+	this.$nextButton = this.$header.append($("<div>")).find(":last");
+	this.$urlDisplayWrapper = this.$header.append($("<div>")).find(":last"); 
+	this.$urlDisplay = this.$urlDisplayWrapper.append($("<input type='text' readonly='readonly'/>")).find(":last");
 	this.$closeButton = this.$header.append($("<div>")).find(":last"); 
 	this.$iframe = this.$content.append($("<iframe>")).find(":last");
 	this.$overlay = this.$content.append($("<div>")).find(":last").hide();
@@ -127,13 +129,24 @@ LightBrowser.prototype.initRender = function(){
 	
 	this.$prevButton.append("<a href='#'><img src="+chrome.extension.getURL('images/prev.png')+"></a>").css({
 		'float': 'left'
-	});
+	}).find('img').css({
+		'verticalAlign': 'bottom'
+	}).length;
+	
 	this.$nextButton.append("<a href='#'><img src="+chrome.extension.getURL('images/next.png')+"></a>").css({
+		'float': 'left'
+	}).find('img').css({
+		'verticalAlign': 'bottom'
+	});
+	
+	this.$urlDisplayWrapper.css({
 		'float': 'left'
 	});
 	
 	this.$closeButton.append("<a href='#'><img src="+chrome.extension.getURL('images/close.png')+"></a>").css({
 		'float': 'right'
+	}).find('img').css({
+		'verticalAlign': 'bottom'
 	});
 	
 	this.$iframe.css({
@@ -190,6 +203,10 @@ LightBrowser.prototype.initRender = function(){
 		'left': '-1px',
 		'top':' -1px'
 	});
+	
+	this.$urlDisplay.css({
+		'border': '1px solid #777'
+	});
 };
 
 LightBrowser.prototype.arrangeSize = function(){
@@ -243,6 +260,14 @@ LightBrowser.prototype.arrangeSize = function(){
 	this.$header.css({
 		'width': (width-this.resizeBarWidth*2)+'px',
 		'height': this.grabHeaderHeight+'px'
+	});
+	
+	this.$urlDisplayWrapper.css({
+		'width': (width - 100)+'px'
+	});
+	this.$urlDisplay.css({
+		'width': (width - 100)+'px',
+		'height': '19px'
 	});
 	
 	this.$iframe.css({
@@ -340,6 +365,13 @@ LightBrowser.prototype.initMouseEvents = function(){
 			});
 			return false;
 		}
+	});
+	
+	this.$urlDisplayWrapper.bind('mousedown', function(e){
+		e.stopPropagation();
+	})
+	.bind('dblclick', function(e){
+		e.stopPropagation();
 	});
 	
 	this.$topEdge.bind('mousedown', function(e){
