@@ -1,9 +1,11 @@
 {
    "background_page": "background.html",
    "content_scripts": [ {
+      "all_frames": true,
       "css": [ "content.css" ],
       "js": [ "jquery-1.7.min.js", "content.js" ],
-      "matches": [ "http://*/*", "https://*/*" ]
+      "matches": [ "http://*/*", "https://*/*" ],
+	  "run_at": "document_start"
    } ],   
    "description": "display Light Browser when right click or Ctrl + Shift + left click on a link",
    "name": "Light Browser",

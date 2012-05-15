@@ -1,10 +1,11 @@
+var lightBrowsers = [];
 var createLightBrowser = function(url){
-	return new LightBrowser(url, 300, 300, 100, $('body').scrollTop()+100, $("body"));
+	lightBrowsers.push( new LightBrowser(url, 300, 300, 100, $('body').scrollTop()+100, $("body")) );
 };
 
 var bindShiftCtrlClick = function(doc){
-	
-	$(doc).delegate("a", "click", function(e){
+	window.addEventListener("mousedown", function(){console.log('a');});
+	$(window).delegate("a", "click", function(e){
 		if( e.ctrlKey && e.shiftKey ){
 			createLightBrowser($(this).attr("href"));
 			e.preventDefault();
@@ -41,10 +42,20 @@ var LightBrowser = function(url, width, height, x, y, $parent){
 	var _this = this;
 	this.$iframe.attr("src", this.url);
 	this.$iframe.load(function(){
-		_this.document = _this.$iframe.contents();
-		bindShiftCtrlClick( _this.document );
+		
+		_this.history = [this.src];
+		_this.historyIndex = 0;
+		_this.updateHeader();
+		
+		//_this.document がブラウザのSame Domain Policyによりアクセス出来ない場合がある。対応を決めるまでこの機能はオフにする
+		//_this.document = _this.$iframe.contents();
+		//bindShiftCtrlClick( _this.document );
 	});
 
+};
+
+LightBrowser.prototype.updateHeader = function(){
+	this.$urlDisplay.html(this.history[this.historyIndex]);
 };
 
 LightBrowser.prototype.initRender = function(){
@@ -57,6 +68,9 @@ LightBrowser.prototype.initRender = function(){
 	this.$leftEdge = this.$browser.append($("<div>")).find(":last");
 	this.$content = this.$browser.append($("<div>")).find(":last");
 	this.$header = this.$content.append($("<div>")).find(":last");
+	this.$prevButton = this.$header.append($("<div>")).find(":last"); 
+	this.$nextButton = this.$header.append($("<div>")).find(":last"); 
+	this.$urlDisplay = this.$header.append($("<div>test</div>")).find(":last");
 	this.$closeButton = this.$header.append($("<div>")).find(":last"); 
 	this.$iframe = this.$content.append($("<iframe>")).find(":last");
 	this.$overlay = this.$content.append($("<div>")).find(":last").hide();
@@ -97,7 +111,7 @@ LightBrowser.prototype.initRender = function(){
 	});
 	
 	this.$leftEdge.css({
-		'background': 'url(chrome-extension://bbfkhdjpobhbfadfcaaeainedmimemla/images/borderTop.png) repeat-x',
+		'background': 'url('+chrome.extension.getURL('images/borderTop.png')+') repeat-x',
 		'cursor': 'w-resize',
 		'float': 'left',
 		'clear': 'both'
@@ -111,7 +125,14 @@ LightBrowser.prototype.initRender = function(){
 		'backgroundImage': '-webkit-linear-gradient(top, #5C8EDA, #4271C9)'
 	});
 	
-	this.$closeButton.append("<a href='#'><img src='chrome-extension://bbfkhdjpobhbfadfcaaeainedmimemla/images/close.png'></a>").css({
+	this.$prevButton.append("<a href='#'><img src="+chrome.extension.getURL('images/prev.png')+"></a>").css({
+		'float': 'left'
+	});
+	this.$nextButton.append("<a href='#'><img src="+chrome.extension.getURL('images/next.png')+"></a>").css({
+		'float': 'left'
+	});
+	
+	this.$closeButton.append("<a href='#'><img src="+chrome.extension.getURL('images/close.png')+"></a>").css({
 		'float': 'right'
 	});
 	
@@ -126,7 +147,7 @@ LightBrowser.prototype.initRender = function(){
 	});
 	
 	this.$rightEdge.css({
-		'background': 'url(chrome-extension://bbfkhdjpobhbfadfcaaeainedmimemla/images/borderTop.png) repeat-x',
+		'background': 'url('+chrome.extension.getURL('images/borderTop.png')+') repeat-x',
 		'cursor': 'e-resize',
 		'float': 'right'
 	});
@@ -287,12 +308,18 @@ LightBrowser.prototype.initMouseEvents = function(){
 		if( moveAction ){
 			endGrab();
 		}
-		_this.$overlay.show(); // iframe内にマウスが行くとmousemoveイベントがキャッチできなくなるため、iframeにoverlayさせるdocument内要素
+		// iframe内にマウスが行くとmousemoveイベントがキャッチできなくなるため、iframeにoverlayさせるdocument内要素
+		$.each(lightBrowsers, function(i, b){
+			b.$overlay.show();
+		});
+		 
 		moveAction = new GrabAction(x, y, callback);
 	};
 
 	var endGrab = function(){
-		_this.$overlay.hide();
+		$.each(lightBrowsers, function(i, b){
+			b.$overlay.hide();
+		});
 		if( moveAction ){
 			moveAction.unbind();
 			delete moveAction;
@@ -330,7 +357,7 @@ LightBrowser.prototype.initMouseEvents = function(){
 		if( e.button==0 ){
 			startGrab(e.clientX, e.clientY, function(deltaX, deltaY){
 				_this.offsetX += deltaX;
-				_this.width -= deltaY;
+				_this.width -= deltaX;
 				_this.arrangeSize();
 			});
 			return false;
@@ -410,6 +437,16 @@ LightBrowser.prototype.initMouseEvents = function(){
 		if( e.button==0 ){
 			endGrab();
 		}
+	});
+	
+	this.$prevButton.find("a").click(function(){
+		console.log(_this.$iframe);
+		return false;
+	});
+	
+	this.$nextButton.find("a").click(function(){
+		
+		return false;
 	});
 	
 	this.$closeButton.find("a").click(function(){
