@@ -20,6 +20,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse){
 });
 
 var LightBrowser = function(url, width, height, x, y, $parent){
+	this.iframeName = "lightBrowserName"+lightBrowsers.length;
 	this.url = url;
 	this.width = width;
 	this.height = height;
@@ -39,11 +40,33 @@ var LightBrowser = function(url, width, height, x, y, $parent){
 	this.initRender();
 	this.initMouseEvents();
 	
+	this.history = [];
+	this.historyIndex = -1;
+	
 	var _this = this;
 	this.$iframe.attr("src", this.url);
 	this.$iframe.load(function(){
-		_this.history.push(this.src);
-		_this.historyIndex = 0;
+		
+		if( _this.historyIndex==-1 && _this.history.length==0 ){ // はじめにロードするタイミング
+			_this.history.push(this.src);
+		}
+		else {
+			try{
+				var url = _this.$iframe.contents()[0].location.href;
+				if( _this.history[_this.historyIndex+1]!=url ){
+					_this.history.push(url);
+					console.log(url);
+				}
+			}
+			catch(e){
+				
+			}
+			 
+			
+		}
+		_this.historyIndex++;
+		console.log(_this.history);
+		console.log(_this.historyIndex);
 		_this.updateHeader();
 	});
 };
@@ -53,11 +76,26 @@ LightBrowser.prototype.updateHeader = function(){
 };
 
 LightBrowser.prototype.historyForward = function(){
-	
+	history.forward();
+	//this.$iframe[0].history.forward();
+	return true;
+	if( this.historyIndex>=0 && this.history.length>this.historyIndex-1 ){
+		this.$iframe.attr("src", this.history[++this.historyIndex]);
+		--this.historyIndex;
+		return true;
+	}
+	else return false;
 };
 
 LightBrowser.prototype.historyBack = function(){
-	
+	history.back();
+	return true;
+	if( this.historyIndex>=1 ){
+		this.$iframe.attr("src", this.history[--this.historyIndex]);
+		--this.historyIndex;
+		return true;
+	}
+	else return false;	
 };
 
 LightBrowser.prototype.initRender = function(){
@@ -75,7 +113,7 @@ LightBrowser.prototype.initRender = function(){
 	this.$urlDisplayWrapper = this.$header.append($("<div>")).find(":last"); 
 	this.$urlDisplay = this.$urlDisplayWrapper.append($("<input type='text' readonly='readonly'/>")).find(":last");
 	this.$closeButton = this.$header.append($("<div>")).find(":last"); 
-	this.$iframe = this.$content.append($("<iframe>")).find(":last");
+	this.$iframe = this.$content.append($("<iframe name='"+this.iframeName+"'>")).find(":last");
 	this.$overlay = this.$content.append($("<div>")).find(":last").hide();
 	this.$rightEdge = this.$browser.append($("<div>")).find(":last");
 	this.$leftBottomResizeEdge = this.$browser.append($("<div>")).find(":last");
