@@ -1,5 +1,5 @@
 {
-   "background_page": "background.html",
+   "background": {"page": "background.html"},
    "content_scripts": [ {
       "all_frames": true,
       "css": [ "content.css" ],
@@ -10,5 +10,7 @@
    "description": "display Light Browser when right click or Ctrl + Shift + left click on a link",
    "name": "Light Browser",
    "permissions": [ "contextMenus" ],
-   "version": "0.0.1"
+   "version": "0.0.1",
+   "manifest_version": 2,
+   "web_accessible_resources": ["jquery-1.7.min.js", "images/borderTop.png", "images/close.png", "images/next.png", "images/prev.png"]
 }

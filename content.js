@@ -21,6 +21,8 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse){
 
 var LightBrowser = function(url, width, height, x, y, $parent){
 	this.iframeName = "lightBrowserName"+lightBrowsers.length;
+	this.index = lightBrowsers.length; // lightBrowserにつける通し番号
+	this.removed = false;
 	this.url = url;
 	this.width = width;
 	this.height = height;
@@ -45,34 +47,44 @@ var LightBrowser = function(url, width, height, x, y, $parent){
 	
 	var _this = this;
 	this.$iframe.attr("src", this.url);
-	this.$iframe.load(function(){
+	
+	this.popstateHandler = function(e){
+		console.log(e);
+		if( e.originalEvent.state+1==_this.index ){
+			if( _this.removed )
+				console.log('a');
+			else
+				_this.$browser.toggle();
+		}
+		else if( e.originalEvent.state==null && _this.index==0){
+			_this.$browser.toggle();
+		}
+	};
+	
+	$(window).bind('popstate', this.popstateHandler);
+	
+	this.$iframe.one("load", function(e){
+		_this.url = this.src;
+		history.pushState(_this.index, "", document.location.href);
 		
-		if( _this.historyIndex==-1 && _this.history.length==0 ){ // はじめにロードするタイミング
-			_this.history.push(this.src);
+		_this.updateHeader();
+		e.stopImmediatePropagation();
+	});
+	
+	this.$iframe.load(function(){
+		try{
+			var url = _this.$iframe.contents()[0].location.href;
+			_this.url = url;
 		}
-		else {
-			try{
-				var url = _this.$iframe.contents()[0].location.href;
-				if( _this.history[_this.historyIndex+1]!=url ){
-					_this.history.push(url);
-					console.log(url);
-				}
-			}
-			catch(e){
-				
-			}
-			 
-			
+		catch(e){
+			alert("cross domain");
 		}
-		_this.historyIndex++;
-		console.log(_this.history);
-		console.log(_this.historyIndex);
 		_this.updateHeader();
 	});
 };
 
 LightBrowser.prototype.updateHeader = function(){
-	this.$urlDisplay.val(this.history[this.historyIndex]);
+	this.$urlDisplay.val(this.url);
 };
 
 LightBrowser.prototype.historyForward = function(){
@@ -395,8 +407,9 @@ LightBrowser.prototype.initMouseEvents = function(){
 	};
 
 	var endGrab = function(){
+		if( _this.isFullScreen ) return;
 		_this.width = _this.displayWidth;
-		_this.hegith = _this.displayHeight;
+		_this.height = _this.displayHeight;
 		
 		$.each(lightBrowsers, function(i, b){
 			b.$overlay.hide();
@@ -542,6 +555,8 @@ LightBrowser.prototype.initMouseEvents = function(){
 	
 	this.$closeButton.find("a").click(function(){
 		_this.$browser.remove();
+		_this.removed = true;
+		//$(window).unbind('popstate', _this.popstateHandler);
 		return false;
 	});
 };
